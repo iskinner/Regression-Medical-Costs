@@ -1,12 +1,13 @@
 #Ian Skinner
 #2021-11-22
-#Objective: predict medical charges per person
+#Objective: predict medical charges per person, assign insurance rates based on prediction and target profit margin
 #Source: https://www.kaggle.com/mirichoi0218/insurance
 
 #setup===========================================================================================================================================================================
 rm(list = ls())
 options(scipen = 999)
 set.seed(808)
+margin = 1.1 / 12 #10% margin on a monthly bill (pretending the charges are for one year)
 
 #call pkgs
 pacman::p_load(tidyverse, janitor, scales, rio, dplyr, lubridate, gtsummary, caret)
@@ -72,6 +73,7 @@ disc_fn(medical, region)
 medical = medical %>% 
   mutate(children = as.factor(children))
 
+#data preprocessing============================================================================================================================================================
 #dummy varible creation
 dummy_vars = c("sex", "smoker", "region", "children")
 
@@ -103,6 +105,24 @@ medical = bind_cols(medical_df, preprocess_df) %>%
 #correlations
 cor_mtx = cor(medical)
 
-highly_correlated = findCorrelation(cor_mtx,
-                                    names = TRUE,
-                                    cutoff = 0.7)
+findCorrelation(cor_mtx, names = TRUE, cutoff = 0.7)
+
+#remove highly correlated, duplicative, or unnecessary variables
+medical = medical %>% 
+  select(!c(sexmale, smokerno))
+
+#find near zero variance variables
+nearZeroVar(medical, names = TRUE)
+
+#fix near zero variance columns by re-assigning to new column with a bigger bucket
+medical = medical %>% 
+  mutate(children_3_over = children_3 + children_4 + children_5) %>%
+  select(!c(children_3, children_4, children_5)) %>% 
+  relocate(children_3_over, .after = "children_2")
+
+#check if we got rid of nzv issue
+nearZeroVar(medical, names = TRUE)
+
+#check if we made any new large correlations
+cor_mtx = cor(medical)
+findCorrelation(cor_mtx, names = TRUE, cutoff = 0.7)
