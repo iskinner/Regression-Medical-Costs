@@ -10,7 +10,7 @@ set.seed(808)
 margin = 1.1 / 12 #10% margin on a monthly bill (pretending the charges are for one year)
 
 #call pkgs
-pacman::p_load(tidyverse, janitor, scales, rio, dplyr, lubridate, gtsummary, caret)
+pacman::p_load(tidyverse, janitor, scales, rio, dplyr, lubridate, gtsummary, caret, gbm)
 theme_set(theme_classic())
 
 #import data
@@ -19,6 +19,9 @@ medical = rio::import("insurance.csv") %>%
   distinct() %>% 
   mutate(id = row_number()) %>% 
   relocate(id)
+
+#shuffle dataset
+medical = slice(medical, sample(1:n()))
 
 #data exploration========================================================================================================================================================================
 slice_head(medical, n = 10)
@@ -126,3 +129,99 @@ nearZeroVar(medical, names = TRUE)
 #check if we made any new large correlations
 cor_mtx = cor(medical)
 findCorrelation(cor_mtx, names = TRUE, cutoff = 0.7)
+
+#rename some variables
+medical = medical %>% 
+  rename(is_smoker = smokeryes,
+         is_female = sexfemale,
+         region_northeast = regionnortheast,
+         region_northwest = regionnorthwest,
+         region_southeast = regionsoutheast,
+         region_southwest = regionsouthwest,
+         no_children = children_0,
+         one_child = children_1,
+         two_children = children_2,
+         more_than_two_kids = children_3_over)
+
+#machine learning================================================================================================================================================
+
+#split data into training and testing sets
+split = createDataPartition(medical$charges, p = 0.7, list = F)
+
+#store training and testing data
+train = data.frame(medical[split,])
+test = data.frame(medical[-split,])
+
+#check distributions of outcome variable to make sure our datasets are balanced
+lattice::histogram(train$charges)
+lattice::histogram(test$charges)
+
+#initialize empty data frame
+results = data.frame(method = as.character(),
+                     name = as.character(),
+                     optimized = as.character(),
+                     train_rmse = as.numeric(),
+                     train_mae = as.numeric(),
+                     test_rmse = as.numeric(),
+                     test_mae = as.numeric())
+
+#linear regression - unoptimized====================================================================================================================================
+method = "lm"
+optimized = "N"
+name = "Linear Regression"
+
+#train model
+model = train(data = train,
+              charges ~ .,
+              method = method)
+
+#check out model
+model
+
+#in sample results
+train_rmse = model$results$RMSE
+train_mae = model$results$MAE
+
+ggplot(varImp(model)) +
+  labs(title = paste0("Feature importance plot, model type: ", name),
+       subtitle = "Importance scaled to 100",
+       y = "Feature importance")
+
+prediction = predict(model, test)
+test_rmse = RMSE(prediction, test$charges)
+test_mae = MAE(prediction, test$charges)
+
+model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_rmse, test_mae)
+
+results = bind_rows(results, model_results)
+
+#gradient boosting - unoptimized=======================================================================================================================================
+method = "gbm"
+optimized = "N"
+name = "Gradient Boosting"
+
+#train model
+model = train(data = train,
+              charges ~ .,
+              method = method)
+
+#check out model
+model
+
+#in sample results
+train_best = row.names(model$bestTune)
+train_rmse = model$results[train_best,]$RMSE
+train_mae = model$results[train_best,]$MAE
+
+ggplot(varImp(model)) +
+  labs(title = paste0("Feature importance plot, model type: ", name),
+       subtitle = "Importance scaled to 100",
+       y = "Feature importance")
+
+prediction = predict(model, test)
+test_rmse = RMSE(prediction, test$charges)
+test_mae = MAE(prediction, test$charges)
+
+model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_rmse, test_mae)
+
+results = bind_rows(results, model_results)
