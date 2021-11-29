@@ -225,3 +225,57 @@ test_mae = MAE(prediction, test$charges)
 model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_rmse, test_mae)
 
 results = bind_rows(results, model_results)
+
+#gradient boosting - unoptimized=======================================================================================================================================
+method = "gbm"
+optimized = "Y"
+name = "Gradient Boosting"
+
+#set up 10-fold cross valiation
+trControl = trainControl(method = "repeatedcv",
+                         number = 10,
+                         repeats = 10)
+
+#custom tuning parameters for gradient boosting model
+tuneGrid = expand.grid(interaction.depth = c(1, 3, 5, 7),
+                       n.trees = (1:10) * 10,
+                       shrinkage = 0.05,
+                       n.minobsinnode = 5)
+
+#train model
+model = train(data = train,
+              charges ~ .,
+              method = method,
+              tuneGrid = tuneGrid,
+              trControl = trControl)
+
+#check out model
+model
+ggplot(model)
+
+#in sample results
+train_best = row.names(model$bestTune)
+train_rmse = model$results[train_best,]$RMSE
+train_mae = model$results[train_best,]$MAE
+
+ggplot(varImp(model)) +
+  labs(title = paste0("Feature importance plot, model type: ", name),
+       subtitle = "Importance scaled to 100",
+       y = "Feature importance")
+
+prediction = predict(model, test)
+test_rmse = RMSE(prediction, test$charges)
+test_mae = MAE(prediction, test$charges)
+
+model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_rmse, test_mae)
+
+results = bind_rows(results, model_results)
+
+results
+
+#store parameters of best model
+method = "gbm"
+n.trees = 80
+interaction.depth = 5
+shrinkage = 0.05
+n.minobsinnode = 5
