@@ -274,8 +274,9 @@ results = bind_rows(results, model_results)
 results
 
 #store parameters of best model
-method = "gbm"
-n.trees = 80
-interaction.depth = 5
-shrinkage = 0.05
-n.minobsinnode = 5
+best_method = "gbm"
+
+best_tuneGrid = expand.grid(interaction.depth = 5,
+                            n.trees = 80,
+                            shrinkage = 0.05,
+                            n.minobsinnode = 5)
