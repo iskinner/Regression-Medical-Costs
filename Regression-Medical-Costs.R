@@ -10,7 +10,7 @@ set.seed(808)
 margin = 1.1 / 12 #10% margin on a monthly bill (pretending the charges are for one year)
 
 #call pkgs
-pacman::p_load(tidyverse, janitor, scales, rio, dplyr, lubridate, gtsummary, caret, gbm)
+pacman::p_load(tidyverse, janitor, scales, rio, dplyr, lubridate, gtsummary, caret, gbm, modelr)
 theme_set(theme_classic())
 
 #import data
@@ -23,11 +23,23 @@ medical = rio::import("insurance.csv") %>%
 #shuffle dataset
 medical = slice(medical, sample(1:n()))
 
+# tmp = medical %>% 
+#   mutate(l_charges = log(charges),
+#          avg_charges = mean(charges),
+#          avg_l_charges = mean(l_charges),
+#          median_charges = median(charges),
+#          median_l_charges = median(l_charges),
+#          unlog = exp(l_charges))
+
 #data exploration========================================================================================================================================================================
 slice_head(medical, n = 10)
 summary(medical)
 
-#na evaluatio
+#note - no one has a charge of exactly zero...
+# ->our sample must be of those who went to hospital / had a charge
+# ->won't be representative, i.e. those without any medical charges for a period are not included!
+
+#na evaluation
 nrow(anti_join(medical, na.omit(medical), by = "id"))
 
 #summary tables
@@ -72,9 +84,14 @@ disc_fn(medical, sex)
 disc_fn(medical, smoker)
 disc_fn(medical, region)
 
-#recode children
+#recode children, take natural log of medical charges to create normal distribution
 medical = medical %>% 
-  mutate(children = as.factor(children))
+  mutate(children = as.factor(children),
+         charges = log(charges))
+
+medical %>% 
+  ggplot(aes(x = charges)) +
+  geom_histogram()
 
 #data preprocessing============================================================================================================================================================
 #dummy varible creation
@@ -92,7 +109,7 @@ dummy_df = data.frame(predict(dummyVars(data = dummy_df,
 medical = bind_cols(medical_df, dummy_df)
 
 #variables for preprocessing
-preprocess_vars = c("age", "bmi", "charges")
+preprocess_vars = c("age", "bmi")
 
 preprocess_df = medical %>% select(all_of(preprocess_vars))
 medical_df = medical %>% select(!all_of(preprocess_vars))
@@ -171,7 +188,8 @@ results = data.frame(method = as.character(),
                      train_rmse = as.numeric(),
                      train_mae = as.numeric(),
                      test_rmse = as.numeric(),
-                     test_mae = as.numeric())
+                     test_mae = as.numeric(),
+                     test_mape = as.numeric())
 
 #linear regression - unoptimized====================================================================================================================================
 method = "lm"
@@ -195,11 +213,11 @@ ggplot(varImp(model)) +
        subtitle = "Importance scaled to 100",
        y = "Feature importance")
 
-prediction = predict(model, test)
-test_rmse = RMSE(prediction, test$charges)
-test_mae = MAE(prediction, test$charges)
+test_rmse = rmse(model, test)
+test_mae = mae(model, test)
+test_mape = mape(model, test)
 
-model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_rmse, test_mae)
+model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_rmse, test_mae, test_mape)
 
 results = bind_rows(results, model_results)
 
@@ -229,11 +247,11 @@ ggplot(varImp(model)) +
        subtitle = "Importance scaled to 100",
        y = "Feature importance")
 
-prediction = predict(model, test)
-test_rmse = RMSE(prediction, test$charges)
-test_mae = MAE(prediction, test$charges)
+test_rmse = rmse(model, test)
+test_mae = mae(model, test)
+test_mape = mape(model, test)
 
-model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_rmse, test_mae)
+model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_rmse, test_mae, test_mape)
 
 results = bind_rows(results, model_results)
 
@@ -279,29 +297,43 @@ ggplot(varImp(model)) +
        subtitle = "Importance scaled to 100",
        y = "Feature importance")
 
-prediction = predict(model, test)
-test_rmse = RMSE(prediction, test$charges)
-test_mae = MAE(prediction, test$charges)
+test_rmse = rmse(model, test)
+test_mae = mae(model, test)
+test_mape = mape(model, test)
 
-model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_rmse, test_mae)
+model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_rmse, test_mae, test_mape)
 
 results = bind_rows(results, model_results)
 
 #save version of model for validation set later
 gbm_model_v2 = model
 
+results
+
 #validation==================================================================================================================================================================
 
 #try out models on validation set
-prediction = predict(lm_model, validation)
-rmse_v_lm = RMSE(prediction, validation$charges)
-
-prediction = predict(gbm_model_v1, validation)
-rmse_v_gbmv1 = RMSE(prediction, validation$charges)
-
-prediction = predict(gbm_model_v2, validation)
-rmse_v_gbmv2 = RMSE(prediction, validation$charges)
+rmse_v_lm = rmse(model, validation)
+rmse_v_gbmv1 = rmse(model, validation)
+rmse_v_gbmv2 = rmse(model, validation)
 
 rmse_v_lm
 rmse_v_gbmv1
 rmse_v_gbmv2
+
+#implementation=====================================================================================================================================================================
+#let's assign some insurance rates based on the predicted costs for our customers based on the best model
+#pretend we don't know the insurance rates for our validation set
+best_prediction = data.frame(predict(gbm_model_v2, validation)) %>% 
+  rename(predicted_charges = 1)
+
+#make a df for 'new customers' - not really new, but just pretending here
+new_customers = validation %>% 
+  select(!c(charges)) %>% 
+  bind_cols(best_prediction) %>% 
+  mutate(predicted_charges = exp(predicted_charges))
+
+#assuming the original charges were for a year, we can 
+
+#un-center and scale variables
+lattice::histogram(new_customers$predicted_charges)
