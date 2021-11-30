@@ -153,17 +153,17 @@ medical = medical %>%
 
 #machine learning================================================================================================================================================
 
-#split data into training, testing and validation sets
+#split data into training, testing and validation sets (70 - 20 - 10)
 split = createDataPartition(medical$charges, p = 0.7, list = F)
 
-#store validation set
+#store training set, rename other part of split to original df
 train = data.frame(medical[split,])
 medical = data.frame(medical[-split,])
 
-#split again for training and test set
+#split what's left for test and validation sets
 split = createDataPartition(medical$charges, p = 0.67, list = F)
 
-#store train and test set
+#store test and validation sets
 test = data.frame(medical[split,])
 validation = data.frame(medical[-split,])
 
