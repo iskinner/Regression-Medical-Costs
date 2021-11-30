@@ -7,7 +7,7 @@
 rm(list = ls())
 options(scipen = 999)
 set.seed(808)
-margin = 1.1 / 12 #10% margin on a monthly bill (pretending the charges are for one year)
+margin = 1.5 / 12 #50% margin on a monthly bill (pretending the charges are for one year)
 
 #call pkgs
 pacman::p_load(tidyverse, janitor, scales, rio, dplyr, lubridate, gtsummary, caret, gbm, modelr)
@@ -266,7 +266,8 @@ name = "Gradient Boosting"
 #set up 10-fold cross valiation
 trControl = trainControl(method = "repeatedcv",
                          number = 10,
-                         repeats = 10)
+                         repeats = 10,
+                         savePredictions = TRUE)
 
 #custom tuning parameters for gradient boosting model
 tuneGrid = expand.grid(interaction.depth = c(1, 3, 5, 7),
@@ -313,27 +314,44 @@ results
 #validation==================================================================================================================================================================
 
 #try out models on validation set
-rmse_v_lm = rmse(model, validation)
-rmse_v_gbmv1 = rmse(model, validation)
-rmse_v_gbmv2 = rmse(model, validation)
+rmse_v_lm = rmse(lm_model, validation)
+rmse_v_gbmv1 = rmse(gbm_model_v1, validation)
+rmse_v_gbmv2 = rmse(gbm_model_v2, validation)
 
 rmse_v_lm
 rmse_v_gbmv1
 rmse_v_gbmv2
 
+results
+
 #implementation=====================================================================================================================================================================
 #let's assign some insurance rates based on the predicted costs for our customers based on the best model
 #pretend we don't know the insurance rates for our validation set
-best_prediction = data.frame(predict(gbm_model_v2, validation)) %>% 
+
+new_customers = validation %>% 
+  select(!c(charges))
+
+#get optimal trees from best tune
+optimal_trees = as.numeric(gbm_model_v2$bestTune[1])
+
+#make 'new' predictions
+optimal_predictions = data.frame(predict(object = gbm_model_v2, 
+                                         newdata = new_customers, 
+                                         n.trees = optimal_trees)) %>% 
   rename(predicted_charges = 1)
 
-#make a df for 'new customers' - not really new, but just pretending here
-new_customers = validation %>% 
-  select(!c(charges)) %>% 
-  bind_cols(best_prediction) %>% 
+#bind predictions to new customers, convert predictions to dollar value
+new_customers = bind_cols(new_customers, optimal_predictions) %>% 
   mutate(predicted_charges = exp(predicted_charges))
 
-#assuming the original charges were for a year, we can 
+
+
+
+#make a df for 'new customers' - not really new, but just pretending here
+
+
+#assuming the original charges were for a year, we can assign some monthly bills for insurance per person
+
 
 #un-center and scale variables
-lattice::histogram(new_customers$predicted_charges)
+
