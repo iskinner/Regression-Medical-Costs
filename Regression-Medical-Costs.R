@@ -145,16 +145,24 @@ medical = medical %>%
 
 #machine learning================================================================================================================================================
 
-#split data into training and testing sets
+#split data into training, testing and validation sets
 split = createDataPartition(medical$charges, p = 0.7, list = F)
 
-#store training and testing data
+#store validation set
 train = data.frame(medical[split,])
-test = data.frame(medical[-split,])
+medical = data.frame(medical[-split,])
+
+#split again for training and test set
+split = createDataPartition(medical$charges, p = 0.67, list = F)
+
+#store train and test set
+test = data.frame(medical[split,])
+validation = data.frame(medical[-split,])
 
 #check distributions of outcome variable to make sure our datasets are balanced
 lattice::histogram(train$charges)
 lattice::histogram(test$charges)
+lattice::histogram(validation$charges)
 
 #initialize empty data frame
 results = data.frame(method = as.character(),
@@ -195,6 +203,9 @@ model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_
 
 results = bind_rows(results, model_results)
 
+#save version of model for validation set later
+lm_model = model
+
 #gradient boosting - unoptimized=======================================================================================================================================
 method = "gbm"
 optimized = "N"
@@ -226,7 +237,10 @@ model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_
 
 results = bind_rows(results, model_results)
 
-#gradient boosting - unoptimized=======================================================================================================================================
+#save version of model for validation set later
+gbm_model_v1 = model
+
+#gradient boosting - optimized=======================================================================================================================================
 method = "gbm"
 optimized = "Y"
 name = "Gradient Boosting"
@@ -247,11 +261,13 @@ model = train(data = train,
               charges ~ .,
               method = method,
               tuneGrid = tuneGrid,
+              # tuneLength = 1,
               trControl = trControl)
 
 #check out model
 model
-ggplot(model)
+ggplot(model) +
+  labs(title = "Modeling error results over n iterations: gradient boosting method")
 
 #in sample results
 train_best = row.names(model$bestTune)
@@ -271,12 +287,21 @@ model_results = data.frame(method, name, optimized, train_rmse, train_mae, test_
 
 results = bind_rows(results, model_results)
 
-results
+#save version of model for validation set later
+gbm_model_v2 = model
 
-#store parameters of best model
-best_method = "gbm"
+#validation==================================================================================================================================================================
 
-best_tuneGrid = expand.grid(interaction.depth = 5,
-                            n.trees = 80,
-                            shrinkage = 0.05,
-                            n.minobsinnode = 5)
+#try out models on validation set
+prediction = predict(lm_model, validation)
+rmse_v_lm = RMSE(prediction, validation$charges)
+
+prediction = predict(gbm_model_v1, validation)
+rmse_v_gbmv1 = RMSE(prediction, validation$charges)
+
+prediction = predict(gbm_model_v2, validation)
+rmse_v_gbmv2 = RMSE(prediction, validation$charges)
+
+rmse_v_lm
+rmse_v_gbmv1
+rmse_v_gbmv2
