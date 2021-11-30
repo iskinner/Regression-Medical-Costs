@@ -23,14 +23,6 @@ medical = rio::import("insurance.csv") %>%
 #shuffle dataset
 medical = slice(medical, sample(1:n()))
 
-# tmp = medical %>% 
-#   mutate(l_charges = log(charges),
-#          avg_charges = mean(charges),
-#          avg_l_charges = mean(l_charges),
-#          median_charges = median(charges),
-#          median_l_charges = median(l_charges),
-#          unlog = exp(l_charges))
-
 #data exploration========================================================================================================================================================================
 slice_head(medical, n = 10)
 summary(medical)
