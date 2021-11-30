@@ -7,7 +7,6 @@
 rm(list = ls())
 options(scipen = 999)
 set.seed(808)
-margin = 1.5 / 12 #50% margin on a monthly bill (pretending the charges are for one year)
 
 #call pkgs
 pacman::p_load(tidyverse, janitor, scales, rio, dplyr, lubridate, gtsummary, caret, gbm, modelr)
