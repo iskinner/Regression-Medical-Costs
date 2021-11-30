@@ -28,8 +28,8 @@ slice_head(medical, n = 10)
 summary(medical)
 
 #note - no one has a charge of exactly zero...
-# ->our sample must be of those who went to hospital / had a charge
-# ->won't be representative, i.e. those without any medical charges for a period are not included!
+# -> our sample must be of those who went to hospital / had a charge
+# -> won't be representative, i.e. those without any medical charges for a period are not represented
 
 #na evaluation
 nrow(anti_join(medical, na.omit(medical), by = "id"))
@@ -86,7 +86,7 @@ medical %>%
   geom_histogram()
 
 #data preprocessing============================================================================================================================================================
-#dummy varible creation
+#dummy variable creation
 dummy_vars = c("sex", "smoker", "region", "children")
 
 dummy_df = medical %>% select(all_of(dummy_vars))
@@ -336,14 +336,4 @@ optimal_predictions = data.frame(predict(object = gbm_model_v2,
 new_customers = bind_cols(new_customers, optimal_predictions) %>% 
   mutate(predicted_charges = exp(predicted_charges))
 
-
-
-
-#make a df for 'new customers' - not really new, but just pretending here
-
-
-#assuming the original charges were for a year, we can assign some monthly bills for insurance per person
-
-
-#un-center and scale variables
-
+slice_head(new_customers, n = 25)
