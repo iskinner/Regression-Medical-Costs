@@ -316,9 +316,10 @@ rmse_v_gbmv2
 results
 
 #implementation=====================================================================================================================================================================
-#let's assign some insurance rates based on the predicted costs for our customers based on the best model
-#pretend we don't know the insurance rates for our validation set
+#for a fictional implementation, we can pretend we have some new customers and we don't know their charges
+#we can just take the validation set and chop off the actual charges, then use the features to predict the charges using the best model
 
+#assign pretend new customers, remove known / real charges
 new_customers = validation %>% 
   select(!c(charges))
 
