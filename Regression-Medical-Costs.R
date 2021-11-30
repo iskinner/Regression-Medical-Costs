@@ -254,7 +254,7 @@ method = "gbm"
 optimized = "Y"
 name = "Gradient Boosting"
 
-#set up 10-fold cross valiation
+#set up 10-fold cross validation
 trControl = trainControl(method = "repeatedcv",
                          number = 10,
                          repeats = 10,
