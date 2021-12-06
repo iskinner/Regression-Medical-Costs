@@ -1,1 +1,16 @@
-# Regression-Medical-Costs
+You can find a full write-up and user-friendly code walkthrough of this analysis here:
+
+https://www.kaggle.com/ikskinne
+
+---
+Repository Dictionary (important files)
+
+-Regression-Medical-Costs.R: R code creating during analysis. End-to-end from importing data, cleaning, preprocessing, model creation, tuning and predictions.
+
+-heart.csv: main dataset used in analysis
+
+---
+This project uses a kaggle.com dataset of heart disease y/n patients and machine learning to predict who will have heart disease based on certain features.
+
+https://www.kaggle.com/fedesoriano/heart-failure-prediction?select=heart.csv
+****
