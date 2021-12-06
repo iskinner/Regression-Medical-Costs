@@ -7,10 +7,10 @@ Repository Dictionary (important files)
 
 -Regression-Medical-Costs.R: R code creating during analysis. End-to-end from importing data, cleaning, preprocessing, model creation, tuning and predictions.
 
--heart.csv: main dataset used in analysis
+-insurance.csv: main dataset used in analysis
 
 ---
-This project uses a kaggle.com dataset of heart disease y/n patients and machine learning to predict who will have heart disease based on certain features.
+This project uses a kaggle.com dataset of medical costs per person and machine learning to predict the charges related to hospital admission.
 
-https://www.kaggle.com/fedesoriano/heart-failure-prediction?select=heart.csv
+https://www.kaggle.com/mirichoi0218/insurance
 ****
